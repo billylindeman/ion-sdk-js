@@ -67,12 +67,59 @@ export default class IonSFUJSONRPCSignal implements Signal {
     );
   }
 
+  pre_offer() {
+    const id = uuidv4();
+    this.socket.send(
+      JSON.stringify({
+        method: 'pre_offer',
+        params: {},
+        id,
+      }),
+    );
+
+    return new Promise<RTCSessionDescriptionInit>((resolve, reject) => {
+      const handler = (event: MessageEvent<any>) => {
+        const resp = JSON.parse(event.data);
+        if (resp.id === id) {
+          resolve(resp.result);
+        }
+        this.socket.removeEventListener('message', handler);
+      };
+      this.socket.addEventListener('message', handler);
+    });
+  }
+
   offer(offer: RTCSessionDescriptionInit) {
     const id = uuidv4();
     this.socket.send(
       JSON.stringify({
         method: 'offer',
         params: { desc: offer },
+        id,
+      }),
+    );
+
+    return new Promise<RTCSessionDescriptionInit>((resolve, reject) => {
+      const handler = (event: MessageEvent<any>) => {
+        const resp = JSON.parse(event.data);
+        if (resp.id === id) {
+          console.log("response: ", resp);
+          if(resp.error) reject(resp.error);
+          else resolve(resp.result);
+        }
+        this.socket.removeEventListener('message', handler);
+      };
+      this.socket.addEventListener('message', handler);
+    });
+  }
+
+
+  answer_ack() {
+    const id = uuidv4();
+    this.socket.send(
+      JSON.stringify({
+        method: 'answer_ack',
+        params: {},
         id,
       }),
     );
@@ -97,6 +144,7 @@ export default class IonSFUJSONRPCSignal implements Signal {
       }),
     );
   }
+
 
   close() {
     this.socket.close();
